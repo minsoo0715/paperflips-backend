@@ -18,5 +18,7 @@
 ## Used Tech
  - TypeScript, Node.js, Express.js, MySQL, AWS S3
 
-
+## Now
+- 현재 학습을 목적으로 리팩토링 진행중입니다.
+- 해당 레포지토리의 Projects-리팩토링에서 진행 사항을 확인할 수 있습니다.
 
