@@ -4,6 +4,10 @@
 - [frontend](https://github.com/ApertureInDimigo/paperflips_flutter)
 - [backend](https://github.com/minsoo0715/paperflips-backend)
 
+## Now
+- 현재(2023년) 학습을 목적으로 리팩토링 진행중입니다.
+- 해당 레포지토리의 Projects-리팩토링에서 진행 사항을 확인할 수 있습니다.
+
 ### Developer
 - [JominJun](https://github.com/JominJun) Design/Planning
 - [woduq1414](https://github.com/woduq1414) FrontEnd Development
@@ -18,7 +22,5 @@
 ## Used Tech
  - TypeScript, Node.js, Express.js, MySQL, AWS S3
 
-## Now
-- 현재 학습을 목적으로 리팩토링 진행중입니다.
-- 해당 레포지토리의 Projects-리팩토링에서 진행 사항을 확인할 수 있습니다.
+
 
