@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import * as mysql from "mysql"; //mysql 모듈
 import path from "path";
 import { S3_server } from "../Image_Server/S3_handler";
-import { dbconfig } from "../config/database";
 import {
   AllRecipeJSON,
   FileJSON,
@@ -11,29 +10,15 @@ import {
 } from "../interface";
 import { logs_ } from "../util/botplay";
 import { check_name, check_number } from "../util/checker";
+import { connection } from "../util/mysql";
 
-class _recipe {
+export default class Recipe {
   connection: mysql.Connection;
-  constructor() {
-    this.connection = mysql.createConnection(dbconfig);
-  }
-  handle = () => {
-    this.connection = mysql.createConnection(dbconfig);
-  };
 
-  connectCheck = (req: Request, res: Response, next: NextFunction) => {
-    const self = this;
-    this.connection.on(`error`, function (err: mysql.MysqlError) {
-      if (err.code === `PROTOCOL_CONNECTION_LOST`) {
-        self.handle();
-        next();
-      } else {
-        next();
-      }
-      next();
-    });
-    next();
-  };
+  constructor() {
+    this.connection = connection;
+  }
+
 
   get = (req: Request, res: Response, next: NextFunction) => {
     const seq: string = req.params.seq;
@@ -226,5 +211,3 @@ class _recipe {
     }
   };
 }
-
-export const recipe = new _recipe();
