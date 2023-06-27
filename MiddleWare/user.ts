@@ -2,7 +2,6 @@ import * as crypto from "crypto";
 import { NextFunction, Request, Response } from "express";
 import * as jwt from "jsonwebtoken";
 import * as mysql from "mysql"; // mysql 모듈
-import { dbconfig } from "../config/database";
 import { secretObj } from "../config/jwt"; // jwt 비밀키
 import {
   CollectionJSONArray,
@@ -15,35 +14,18 @@ import { isAdmin } from "../util/admin"; // admin 판단을 위함
 import { logs_ } from "../util/botplay";
 import { check_id, check_name, check_pwd } from "../util/checker"; // 정규식 체크
 
-const moment: any = require("moment");
-require("moment-timezone");
+import moment from "moment";
+import 'moment-timezone';
+import { connection } from "../util/mysql";
 
 moment.tz.setDefault("Asia/Seoul");
 
-class user_ {
-  connection: mysql.Connection;
+export default class User {
+  connection;
 
   constructor() {
-    this.connection = mysql.createConnection(dbconfig);
+    this.connection = connection;
   }
-
-  handle = () => {
-    this.connection = mysql.createConnection(dbconfig);
-  };
-
-  connectCheck = (req: Request, res: Response, next: NextFunction) => {
-    const self = this;
-    this.connection.on("error", (err: mysql.MysqlError) => {
-      if (err.code === "PROTOCOL_CONNECTION_LOST") {
-        self.handle();
-        next();
-      } else {
-        next();
-      }
-      next();
-    });
-    next();
-  };
 
   getAll = (req: Request, res: Response, next: NextFunction) => {
     this.connection.query(
@@ -56,7 +38,6 @@ class user_ {
           res.status(404).end();
           return;
         }
-
         const raw_data: string = JSON.stringify(rows); // 가공 안된 데이터
         const data: Array<UserJSON> = JSON.parse(
           `[${raw_data.substring(1, raw_data.length - 1)}]`
@@ -79,10 +60,15 @@ class user_ {
     try {
       this.connection.query(
         `SELECT password, salt, name, intro, favorite, deleted_day from Users WHERE id='${data.id}'`,
-        (error: mysql.MysqlError, rows: any) => {
+        (error: mysql.MysqlError, rows: any[]) => {
           if (error) {
             logs_(error.toString());
             res.status(404).end();
+            return;
+          }
+          if (!rows.length) {
+            res.status(404).end();
+            return;
           }
           crypto.pbkdf2(
             data.pwd,
@@ -328,5 +314,3 @@ class user_ {
     }
   };
 }
-
-export const user = new user_();
