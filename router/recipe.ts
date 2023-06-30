@@ -1,6 +1,8 @@
 import express from "express";
+
 import { auth } from "../MiddleWare/authentication";
-import { upload } from "../Image_Server/storage_handler";
+import { uploadImg } from "../Image_Server/storage_handler";
+
 import Recipe from "../MiddleWare/recipe";
 
 const router = express.Router();
@@ -8,7 +10,7 @@ const recipe = new Recipe();
 
 router.get("/data/:seq", recipe.get); //레시피 데이터
 
-router.post("/Upload", auth(true), upload.single(`img`), recipe.upload); //레시피 업로드
+router.post("/Upload", auth(true), uploadImg, recipe.upload); //레시피 업로드
 
 router.get("/Search", recipe.search); //검색
 
