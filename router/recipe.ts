@@ -4,7 +4,7 @@ import { auth } from "../MiddleWare/authentication";
 import { uploadImg } from "../MiddleWare/upload";
 
 import Recipe from "../MiddleWare/recipe";
-import { Role } from "../enum";
+import { Role } from "../types/enum";
 
 const router = express.Router();
 const recipe = new Recipe();
