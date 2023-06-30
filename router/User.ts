@@ -1,10 +1,10 @@
-import express from "express";
+import { Router } from "express";
 
 import { auth } from "../MiddleWare/authentication";
 import User from "../MiddleWare/user";
 import { Role } from "../types/enum";
 
-const router = express.Router();
+const router = Router();
 const user = new User();
 
 router.get("/users", auth(Role.Admin), user.getAll); //모든 유저 정보를 가져옴  admin 권한

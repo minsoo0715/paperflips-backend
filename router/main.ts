@@ -1,10 +1,10 @@
-import express from "express";
+import { middleware as cache } from "apicache";
+import { Router } from "express";
 import { privacy, robot, root } from "../MiddleWare/etc";
 import UserRouter from "./User";
 import RecipeRouter from "./recipe";
-const cache = require("apicache").middleware;
 
-const router = express.Router();
+const router = Router();
 
 router.use("/User", UserRouter); //유저 관련 라우터
 
