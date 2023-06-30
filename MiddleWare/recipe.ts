@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import * as mysql from "mysql"; //mysql 모듈
 import path from "path";
-import { S3_server } from "../Image_Server/S3_handler";
+import { S3_server } from "../util/S3";
 import {
   AllRecipeJSON,
   FileJSON,
