@@ -1,5 +1,5 @@
 import express from "express";
-import { auth } from "../Controller/authetication";
+import { auth } from "../MiddleWare/authentication";
 import { upload } from "../Image_Server/storage_handler";
 import Recipe from "../MiddleWare/recipe";
 
