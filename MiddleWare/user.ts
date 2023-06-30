@@ -47,6 +47,27 @@ export default class User {
     );
   };
 
+  get = (req: Request, res: Response, next: NextFunction) => {
+
+    const userId = req.params.uId;
+
+    this.connection.query(
+      `SELECT id, name, password, intro, favorite, deleted_day from Users where id='${userId}'`,
+      (error: MysqlError, rows: any) => {
+        // sql 쿼리
+        if (error) {
+          // 에러 발생
+          logs_(error.toString());
+          res.status(404).end();
+          return;
+        }
+        const raw_data: string = JSON.stringify(rows); // 가공 안된 데이터
+        const data: UserJSON = JSON.parse(raw_data)[0]; // json 배열 형태로 가공
+        res.status(200).send(data); // 데이터 전송
+      }
+    );
+  };
+
   login = (req: Request, res: Response, next: NextFunction) => {
     const data: loginJSON = {
       id: req.body.id,
