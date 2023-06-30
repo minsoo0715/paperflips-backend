@@ -1,4 +1,4 @@
-import express from "express";
+import { Router } from "express";
 
 import { auth } from "../MiddleWare/authentication";
 import { uploadImg } from "../MiddleWare/upload";
@@ -6,7 +6,7 @@ import { uploadImg } from "../MiddleWare/upload";
 import Recipe from "../MiddleWare/recipe";
 import { Role } from "../types/enum";
 
-const router = express.Router();
+const router = Router();
 const recipe = new Recipe();
 
 router.get("/data/:seq", recipe.get); //레시피 데이터

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
+import request from "request";
 import { logs_, logs_http } from "../util/botLogger";
-const _request = require("request");
 
 export const chk_req = (req: Request, res: Response, next: NextFunction) => {
   if (process.env.NODE_ENV === "development") {
@@ -11,7 +11,7 @@ export const chk_req = (req: Request, res: Response, next: NextFunction) => {
   if (!req.secure) {
     res.redirect(307, `https://paperflips.com${req.url}`);
   } else {
-    _request.get(
+    request.get(
       {
         url: `http://ip-api.com/json/${
           req.headers["x-forwarded-for"] || req.connection.remoteAddress

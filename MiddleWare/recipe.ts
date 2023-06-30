@@ -1,24 +1,23 @@
 import { NextFunction, Request, Response } from "express";
-import * as mysql from "mysql"; //mysql 모듈
+import { Connection, MysqlError } from "mysql"; //mysql 모듈
 import path from "path";
-import { S3_server } from "../util/S3";
 import {
   AllRecipeJSON,
   FileJSON,
   RecipeDetail,
   RecipeJSON,
 } from "../types/interface";
+import { S3_server } from "../util/S3";
 import { logs_ } from "../util/botLogger";
-import { check_name, check_number } from "../util/validation";
 import { connection } from "../util/mysql";
+import { check_name, check_number } from "../util/validation";
 
 export default class Recipe {
-  connection: mysql.Connection;
+  connection: Connection;
 
   constructor() {
     this.connection = connection;
   }
-
 
   get = (req: Request, res: Response, next: NextFunction) => {
     const seq: string = req.params.seq;
@@ -30,7 +29,7 @@ export default class Recipe {
     try {
       this.connection.query(
         `SELECT recipeName,rarity,summary from Recipe WHERE seq='${seq}'`,
-        (error: mysql.MysqlError, rows: any) => {
+        (error: MysqlError, rows: any) => {
           if (error) {
             logs_(error.toString());
             res.status(404).end();
@@ -75,7 +74,7 @@ export default class Recipe {
       `INSERT INTO Recipe (recipeName, rarity, summary) VALUES ('${data.recipeName}', '${data.rarity}', '${data.summary}'); 
                              SELECT LAST_INSERT_ID();
            `,
-      (error: mysql.MysqlError, rows: any) => {
+      (error: MysqlError, rows: any) => {
         if (error) {
           //sql error 발생.. connection.on으로 에러 핸들링 예정
           logs_(error.toString());
@@ -116,7 +115,7 @@ export default class Recipe {
     try {
       this.connection.query(
         `SELECT seq, recipeName, rarity, summary from Recipe WHERE recipeName LIKE '%${recipe}%'`,
-        (error: mysql.MysqlError, rows: any) => {
+        (error: MysqlError, rows: any) => {
           //LIKE를 이용해 검색
           if (error) {
             //에러 발생
@@ -150,7 +149,7 @@ export default class Recipe {
     try {
       this.connection.query(
         `SELECT seq, recipeName,rarity,summary,path from Recipe`,
-        (error: mysql.MysqlError, rows: any) => {
+        (error: MysqlError, rows: any) => {
           //쿼리
           if (error) {
             // 에러
@@ -200,7 +199,7 @@ export default class Recipe {
     try {
       this.connection.query(
         `SELECT * FROM Recipe_Detail WHERE recipeName='${req.params.recipeName}'`,
-        (error: mysql.MysqlError, rows: any) => {
+        (error: MysqlError, rows: any) => {
           res.status(200).send(rows[0]);
           return;
         }

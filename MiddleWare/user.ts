@@ -1,7 +1,7 @@
-import * as crypto from "crypto";
+import crypto from "crypto";
 import { NextFunction, Request, Response } from "express";
-import * as jwt from "jsonwebtoken";
-import * as mysql from "mysql"; // mysql 모듈
+import jwt from "jsonwebtoken";
+import { MysqlError } from "mysql"; // mysql 모듈
 import { secretObj } from "../config/jwt"; // jwt 비밀키
 import {
   CollectionJSONArray,
@@ -15,7 +15,7 @@ import { logs_ } from "../util/botLogger";
 import { check_id, check_name, check_pwd } from "../util/validation"; // 정규식 체크
 
 import moment from "moment";
-import 'moment-timezone';
+import "moment-timezone";
 import { connection } from "../util/mysql";
 
 moment.tz.setDefault("Asia/Seoul");
@@ -30,7 +30,7 @@ export default class User {
   getAll = (req: Request, res: Response, next: NextFunction) => {
     this.connection.query(
       "SELECT id, name, password, intro, favorite, deleted_day from Users",
-      (error: mysql.MysqlError, rows: any) => {
+      (error: MysqlError, rows: any) => {
         // sql 쿼리
         if (error) {
           // 에러 발생
@@ -60,7 +60,7 @@ export default class User {
     try {
       this.connection.query(
         `SELECT password, salt, name, intro, favorite, deleted_day from Users WHERE id='${data.id}'`,
-        (error: mysql.MysqlError, rows: any[]) => {
+        (error: MysqlError, rows: any[]) => {
           if (error) {
             logs_(error.toString());
             res.status(404).end();
@@ -153,7 +153,7 @@ export default class User {
           this.connection.query(
             sql,
             into_data,
-            (err: mysql.MysqlError | null, results: any) => {
+            (err: MysqlError | null, results: any) => {
               if (err) {
                 res.status(404).end();
                 logs_(err.toString());
@@ -176,7 +176,7 @@ export default class User {
 
     this.connection.query(
       `SELECT id,name,intro,favorite,deleted_day from Users WHERE id='${id}'`,
-      (error: mysql.MysqlError, rows: any) => {
+      (error: MysqlError, rows: any) => {
         if (error) {
           logs_(error.toString());
           res.status(404).end();
@@ -200,7 +200,7 @@ export default class User {
     const { id } = res.locals;
     this.connection.query(
       `SELECT rec.seq ,rec.recipeName, rec.rarity, rec.summary,rec.path ,c.Date FROM Recipe AS rec JOIN Collection AS c ON c.rec_num = rec.seq AND c.id = '${id}'`,
-      (error: mysql.MysqlError, rows: any) => {
+      (error: MysqlError, rows: any) => {
         if (error) {
           logs_(error.toString());
           res.status(404).end();
@@ -222,7 +222,7 @@ export default class User {
     const { id } = res.locals;
     this.connection.query(
       `SELECT * FROM Collection WHERE id='${id}' AND rec_num=${Recipe_seq}`,
-      (error: mysql.MysqlError, rows: any) => {
+      (error: MysqlError, rows: any) => {
         if (rows.length != 0 || error) {
           res.status(404).end();
           return;
@@ -231,7 +231,7 @@ export default class User {
           `INSERT INTO Collection (id, rec_num, Date) VALUES ('${id}', ${Recipe_seq}, '${moment().format(
             "YYYY-MM-DD HH:mm:ss"
           )}')`,
-          (error: mysql.MysqlError, rows: any) => {
+          (error: MysqlError, rows: any) => {
             if (error) {
               res.status(404).end();
               return;
@@ -253,7 +253,7 @@ export default class User {
     try {
       this.connection.query(
         `INSERT INTO RoomInfo (title, id, date, Data) VALUES ('${input.title}', '${input.id}', '${input.date}', '${input.Data}')`,
-        (err: mysql.MysqlError, rows: any) => {
+        (err: MysqlError, rows: any) => {
           if (err) {
             res.status(404).end();
             logs_(err.toString());
@@ -273,7 +273,7 @@ export default class User {
       const { id } = res.locals;
       this.connection.query(
         `SELECT seq, title, date, Data FROM RoomInfo WHERE id='${id}'`,
-        (err: mysql.MysqlError, rows: any) => {
+        (err: MysqlError, rows: any) => {
           if (err) {
             res.status(404).end();
             return;
