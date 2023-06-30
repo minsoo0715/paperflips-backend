@@ -1,7 +1,6 @@
 import express from "express";
 
 import { auth } from "../MiddleWare/authentication";
-import { bot_check } from "../MiddleWare/botcheck";
 import User from "../MiddleWare/user";
 import { Role } from "../types/enum";
 
@@ -17,8 +16,6 @@ router.post("/AddCollection/:cId", auth(Role.User), user.addCollection); //컬�
 router.post("/Adduser", user.add); //회원 가입
 
 router.get("/GetMyInfo", auth(Role.User), user.getMyInfo); //자신의 정보 얻어오기
-
-router.get("/check", bot_check); //디코 봇 서버 체크
 
 router.post("/login", user.login); //로그인 토큰 반환
 

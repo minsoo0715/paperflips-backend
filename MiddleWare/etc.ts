@@ -10,3 +10,7 @@ export const robot = (req: Request, res: Response) => {
   res.type("text/plain");
   res.send("User-agent: *\nDisallow: /");
 };
+
+export const root = (req: Request, res: Response) => {
+  res.status(200).end();
+};
