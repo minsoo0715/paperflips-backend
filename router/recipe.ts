@@ -1,7 +1,7 @@
 import express from "express";
 
 import { auth } from "../MiddleWare/authentication";
-import { uploadImg } from "../Image_Server/storage_handler";
+import { uploadImg } from "../MiddleWare/upload";
 
 import Recipe from "../MiddleWare/recipe";
 
