@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { logs_, logs_http } from "../util/botplay";
+import { logs_, logs_http } from "../util/botLogger";
 const _request = require("request");
 
 export const chk_req = (req: Request, res: Response, next: NextFunction) => {
