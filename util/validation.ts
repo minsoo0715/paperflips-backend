@@ -14,7 +14,6 @@ export function check_pwd(object:string):boolean {
     return exp_pwd.test(object);
 }
 
-
 export function check_name(object:string):boolean {
     return exp_name.test(object);
 }
