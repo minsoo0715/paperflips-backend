@@ -9,7 +9,7 @@ import {
   UserJSON,
   loginJSON,
   registerJSON,
-} from "../interface";
+} from "../types/interface";
 import { isAdmin } from "../util/admin"; // admin 판단을 위함
 import { logs_ } from "../util/botLogger";
 import { check_id, check_name, check_pwd } from "../util/validation"; // 정규식 체크

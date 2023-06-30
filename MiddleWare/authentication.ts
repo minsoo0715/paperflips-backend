@@ -1,8 +1,8 @@
 import express, { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { secretObj } from "../config/jwt"; //jwt 비밀키
-import { jwtPayLoad } from "../interface";
-import { Role } from "../enum";
+import { jwtPayLoad } from "../types/interface";
+import { Role } from "../types/enum";
 
 
 function getPayloadWithVerify(request: Request) {

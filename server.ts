@@ -9,7 +9,7 @@ import helmet from 'helmet';
 const compression = require('compression');
 import { hostname } from './config/hostname';
 
-import {chk_req} from './Controller/chk_req'
+import {chk_req} from './MiddleWare/ipSecureFilter';
 
 import Router from './router/main'
 

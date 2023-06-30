@@ -3,7 +3,7 @@ import express from "express";
 import { auth } from "../MiddleWare/authentication";
 import { bot_check } from "../MiddleWare/botcheck";
 import User from "../MiddleWare/user";
-import { Role } from "../enum";
+import { Role } from "../types/enum";
 
 const router = express.Router();
 const user = new User();

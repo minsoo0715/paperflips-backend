@@ -7,7 +7,7 @@ import {
   FileJSON,
   RecipeDetail,
   RecipeJSON,
-} from "../interface";
+} from "../types/interface";
 import { logs_ } from "../util/botLogger";
 import { check_name, check_number } from "../util/validation";
 import { connection } from "../util/mysql";
