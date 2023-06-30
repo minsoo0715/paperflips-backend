@@ -59,3 +59,10 @@ export interface AllRecipeJSON{
     data: Array<Saved_RecipeJSON>,
     length: number;
 }
+
+export interface jwtPayLoad {
+    id: string,
+    admin: boolean,
+    iat: number,
+    exp: number
+}
