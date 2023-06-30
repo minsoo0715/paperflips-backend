@@ -11,8 +11,8 @@ import {
   registerJSON,
 } from "../interface";
 import { isAdmin } from "../util/admin"; // admin 판단을 위함
-import { logs_ } from "../util/botplay";
-import { check_id, check_name, check_pwd } from "../util/checker"; // 정규식 체크
+import { logs_ } from "../util/botLogger";
+import { check_id, check_name, check_pwd } from "../util/validation"; // 정규식 체크
 
 import moment from "moment";
 import 'moment-timezone';

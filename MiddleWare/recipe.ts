@@ -8,8 +8,8 @@ import {
   RecipeDetail,
   RecipeJSON,
 } from "../interface";
-import { logs_ } from "../util/botplay";
-import { check_name, check_number } from "../util/checker";
+import { logs_ } from "../util/botLogger";
+import { check_name, check_number } from "../util/validation";
 import { connection } from "../util/mysql";
 
 export default class Recipe {
