@@ -6,9 +6,9 @@ import RecipeRouter from "./recipe";
 
 const router = Router();
 
-router.use("/User", UserRouter); //유저 관련 라우터
+router.use(UserRouter); //유저 관련 라우터
 
-router.use("/rec", RecipeRouter); //레시피 관련 라우터
+router.use(RecipeRouter); //레시피 관련 라우터
 
 router.get("/privacy", cache("60 minutes"), privacy); //개인정보 취급 방침
 
