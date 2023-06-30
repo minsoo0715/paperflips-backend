@@ -1,6 +1,6 @@
 import express from "express";
 
-import { auth } from "../Controller/authetication";
+import { auth } from "../MiddleWare/authentication";
 import { bot_check } from "../MiddleWare/botcheck";
 import User from "../MiddleWare/user";
 
