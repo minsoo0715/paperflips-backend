@@ -1,21 +1,27 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { secretObj } from "../config/jwt"; //jwt 비밀키
 import { jwtPayLoad } from "../interface";
+import { Role } from "../enum";
 
-export function auth(requiresAdmin: boolean) {
+
+function getPayloadWithVerify(request: Request) {
+  const token: string = request.cookies.user;
+  return jwt.verify(token, secretObj.secret) as jwtPayLoad;
+}
+
+
+export function auth(role: Role) {
   return (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
+    req: Request,
+    res: Response,
+    next: NextFunction
   ) => {
     try {
-      const token: string = req.cookies.user;
-      const payload = jwt.verify(token, secretObj.secret) as jwtPayLoad; //토큰 검증
-
+      const payload = getPayloadWithVerify(req);
       res.locals.id = payload.id;
 
-      if (requiresAdmin && !payload.admin) {
+      if (role == Role.Admin && !payload.admin) {
           res.status(403).end();
           return;
       }
