@@ -15,7 +15,7 @@ export class S3_server {
     this.upload_to_server("profile", id, id + path.extname(original));
   }
 
-  recipe_upload(seq: string, original: string): void {
+  recipe_upload(seq: number, original: string): void {
     this.upload_to_server(
       "recipe_img",
       original,

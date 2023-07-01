@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { Connection, MysqlError } from "mysql"; //mysql 모듈
+import { Connection, MysqlError, OkPacket } from "mysql"; //mysql 모듈
 import path from "path";
 import {
   AllRecipeJSON,
@@ -19,7 +19,7 @@ export default class Recipe {
     this.connection = connection;
   }
 
-  get = (req: Request, res: Response, next: NextFunction) => {
+  getRecipe = (req: Request, res: Response, next: NextFunction) => {
     const seq: string = req.params.seq;
 
     if (!check_number(seq)) {
@@ -28,20 +28,17 @@ export default class Recipe {
     }
     try {
       this.connection.query(
-        `SELECT recipeName,rarity,summary from Recipe WHERE seq='${seq}'`,
-        (error: MysqlError, rows: any) => {
+        "SELECT recipeName, rarity, summary FROM Recipe WHERE seq = ?",
+        [seq],
+        (error: MysqlError | null, rows: any) => {
           if (error) {
             logs_(error.toString());
             res.status(404).end();
             return;
           }
-          const obj: string = JSON.stringify(rows);
 
-          const obj2: any = JSON.parse(
-            `{"data": ${obj.substring(1, obj.length - 1)}}`
-          );
-
-          res.status(200).send(obj2);
+          const recipe: RecipeJSON = rows[0];
+          res.status(200).send(recipe);
           return;
         }
       );
@@ -52,7 +49,7 @@ export default class Recipe {
     }
   };
 
-  upload = (req: Request, res: Response, next: NextFunction) => {
+  uploadRecipe = (req: Request, res: Response, next: NextFunction) => {
     const host: string = `https://paperflips.s3.amazonaws.com`;
 
     const data: RecipeJSON = {
@@ -71,20 +68,16 @@ export default class Recipe {
     }
 
     this.connection.query(
-      `INSERT INTO Recipe (recipeName, rarity, summary) VALUES ('${data.recipeName}', '${data.rarity}', '${data.summary}'); 
-                             SELECT LAST_INSERT_ID();
-           `,
-      (error: MysqlError, rows: any) => {
+      "INSERT INTO Recipe (recipeName, rarity, summary) VALUES (?, ?, ?)",
+      [data.recipeName, data.rarity, data.summary],
+      (error: MysqlError | null, rows: OkPacket) => {
         if (error) {
           //sql error 발생.. connection.on으로 에러 핸들링 예정
           logs_(error.toString());
           res.status(404).end();
           return;
         }
-        const raw_data: string = JSON.stringify(rows); //sql raw data
-        const data: any = JSON.parse(raw_data); //JSON 형식으로 변경
-        const seq: string = JSON.stringify(data[1][0][`LAST_INSERT_ID()`]); //입력한 파일의 SEQ를 받아옴
-
+        const seq: number = rows.insertId;
         const result: FileJSON = {
           //업로드 파일 관련 메타데이터
           originalname: req.file.originalname,
@@ -93,18 +86,17 @@ export default class Recipe {
 
         const image_server = new S3_server();
         image_server.recipe_upload(seq, result.originalname); //recipe_img 디렉토리에 파일을 업로드 함..
-        this.connection.query(
-          `UPDATE Recipe SET path='${host}/recipe_img/${seq}${path.extname(
-            req.file.originalname
-          )}' WHERE seq='${seq}'`
-        ); //업로드 한 파일의 s3 경로를 받아옴
+        this.connection.query("UPDATE Recipe SET path = ? WHERE seq = ?", [
+          `${host}/recipe_img/${seq}${path.extname(req.file.originalname)}`,
+          seq,
+        ]); //업로드 한 파일의 s3 경로를 받아옴
         res.status(200).end(); //성공
         return;
       }
     );
   };
 
-  search = (req: Request, res: Response, next: NextFunction) => {
+  searchRecipes = (req: Request, res: Response, next: NextFunction) => {
     const recipe: any = req.query.q;
 
     if (!check_name(recipe)) {
@@ -114,8 +106,9 @@ export default class Recipe {
 
     try {
       this.connection.query(
-        `SELECT seq, recipeName, rarity, summary from Recipe WHERE recipeName LIKE '%${recipe}%'`,
-        (error: MysqlError, rows: any) => {
+        "SELECT seq, recipeName, rarity, summary from Recipe WHERE recipeName LIKE %?%",
+        [recipe],
+        (error: MysqlError | null, rows: any) => {
           //LIKE를 이용해 검색
           if (error) {
             //에러 발생
@@ -127,14 +120,11 @@ export default class Recipe {
             res.status(404).end(); //404
             return;
           }
-          const raw_data: string = JSON.stringify(rows);
-          const data: any = JSON.parse(
-            `{ "data" : [ ${raw_data.substring(
-              1,
-              raw_data.length - 1
-            )}] , "length" : ${rows.length}}`
-          ); //데이터 가공
-          res.status(200).send(data);
+
+          res.status(200).send({
+            data: rows,
+            length: rows.length,
+          });
           return;
         }
       );
@@ -145,10 +135,10 @@ export default class Recipe {
     }
   };
 
-  getAll = (req: Request, res: Response, next: NextFunction) => {
+  getRecipes = (req: Request, res: Response, next: NextFunction) => {
     try {
       this.connection.query(
-        `SELECT seq, recipeName,rarity,summary,path from Recipe`,
+        "SELECT seq, recipeName, rarity, summary, path FROM Recipe",
         (error: MysqlError, rows: any) => {
           //쿼리
           if (error) {
@@ -158,15 +148,11 @@ export default class Recipe {
             res.status(404).end(); // 실패
             return;
           }
-          const raw_data: string = JSON.stringify(rows);
-          const data: AllRecipeJSON = JSON.parse(
-            `{ "data" : [ ${raw_data.substring(
-              1,
-              raw_data.length - 1
-            )} ], "length" : ${rows.length}}`
-          ); //데이터 가공
-
-          res.status(200).send(data); // 성공
+          const data: AllRecipeJSON = rows;
+          res.status(200).send({
+            data,
+            length: rows.length,
+          });
         }
       );
     } catch (e) {
@@ -184,9 +170,10 @@ export default class Recipe {
         VidPath: req.body.VidPath,
         ImgPath: req.body.ImgPath,
       };
-      this.connection
-        .query(`INSERT INTO Recipe_Detail (recipeName, detail, VidPath, ImgPath) 
-            VALUES ('${data.recipeName}', '${data.detail}', '${data.VidPath}', '${data.ImgPath}')`);
+      this.connection.query(
+        "INSERT INTO Recipe_Detail (recipeName, detail, VidPath, ImgPath) VALUES (?, ?, ?, ?)",
+        [data.recipeName, data.detail, data.VidPath, data.ImgPath]
+      );
       res.status(200).end();
     } catch (e) {
       logs_(e as string);
@@ -198,8 +185,9 @@ export default class Recipe {
   getDetail = (req: Request, res: Response, next: NextFunction) => {
     try {
       this.connection.query(
-        `SELECT * FROM Recipe_Detail WHERE recipeName='${req.params.recipeName}'`,
-        (error: MysqlError, rows: any) => {
+        "SELECT * FROM Recipe_Detail WHERE recipeName = ?",
+        [req.params.recipeName],
+        (error: MysqlError | null, rows: any) => {
           res.status(200).send(rows[0]);
           return;
         }
