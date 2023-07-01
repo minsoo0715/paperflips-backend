@@ -25,4 +25,4 @@ const upload: multer.Multer = multer(
   }
 );
 
-export const uploadImg = () => upload.single("img");
+export const uploadImg = upload.single("img");
