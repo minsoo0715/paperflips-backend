@@ -12,10 +12,10 @@ const recipe = new Recipe();
 
 
 
-router.get("/recipes", recipe.getAll); //모든 레시피 데이터 가져오기 LIMIT 추가 예정.
-router.get("/recipes", recipe.search); //검색
-router.get("/recipes/:seq", recipe.get); //레시피 데이터
-router.post("/recipes", auth(Role.Admin), uploadImg, recipe.upload); //레시피 업로드
+router.get("/recipes", recipe.getRecipes); //모든 레시피 데이터 가져오기 LIMIT 추가 예정.
+router.get("/recipes", recipe.searchRecipes); //검색
+router.get("/recipes/:seq", recipe.getRecipe); //레시피 데이터
+router.post("/recipes", auth(Role.Admin), uploadImg, recipe.uploadRecipe); //레시피 업로드
 
 router.get("/recipes/details/:recipeName", recipe.getDetail); //상세 설명 가져오기
 router.post("/recipes/details/:recipeName", auth(Role.Admin), recipe.addDetail); //상세 설명 추가

@@ -27,7 +27,7 @@ export default class User {
     this.connection = connection;
   }
 
-  getAll = (req: Request, res: Response, next: NextFunction) => {
+  getUsers = (req: Request, res: Response, next: NextFunction) => {
     this.connection.query(
       "SELECT id, name, password, intro, favorite, deleted_day from Users",
       (error: MysqlError, rows: any) => {
@@ -38,22 +38,18 @@ export default class User {
           res.status(404).end();
           return;
         }
-        const raw_data: string = JSON.stringify(rows); // 가공 안된 데이터
-        const data: Array<UserJSON> = JSON.parse(
-          `[${raw_data.substring(1, raw_data.length - 1)}]`
-        ); // json 배열 형태로 가공
-        res.status(200).send(data); // 데이터 전송
+        res.status(200).send(rows); // 데이터 전송
       }
     );
   };
 
-  get = (req: Request, res: Response, next: NextFunction) => {
-
+  getUser = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.params.uId;
 
     this.connection.query(
-      `SELECT id, name, password, intro, favorite, deleted_day from Users where id='${userId}'`,
-      (error: MysqlError, rows: any) => {
+      "SELECT id, name, password, intro, favorite, deleted_day from Users where id = ?",
+      [userId],
+      (error: MysqlError | null, rows: any) => {
         // sql 쿼리
         if (error) {
           // 에러 발생
@@ -61,9 +57,7 @@ export default class User {
           res.status(404).end();
           return;
         }
-        const raw_data: string = JSON.stringify(rows); // 가공 안된 데이터
-        const data: UserJSON = JSON.parse(raw_data)[0]; // json 배열 형태로 가공
-        res.status(200).send(data); // 데이터 전송
+        res.status(200).send(rows[0]); // 데이터 전송
       }
     );
   };
@@ -80,8 +74,9 @@ export default class User {
     }
     try {
       this.connection.query(
-        `SELECT password, salt, name, intro, favorite, deleted_day from Users WHERE id='${data.id}'`,
-        (error: MysqlError, rows: any[]) => {
+        "SELECT password, salt, name, intro, favorite, deleted_day from Users WHERE id = ?",
+        [data.id],
+        (error: MysqlError | null, rows: any[]) => {
           if (error) {
             logs_(error.toString());
             res.status(404).end();
@@ -139,7 +134,7 @@ export default class User {
     }
   };
 
-  add = (req: Request, res: Response, next: NextFunction) => {
+  register = (req: Request, res: Response, next: NextFunction) => {
     const data: registerJSON = {
       id: req.body.id,
       pwd: req.body.password,
@@ -163,17 +158,11 @@ export default class User {
         "sha512",
         (err: Error | null, key: Buffer) => {
           const en_pwd: string = key.toString("base64"); // 암호화한 pwd
-
           const salt: string = buf.toString("base64"); // 랜덤 문자열 salt
 
-          const into_data: string[] = [data.id, en_pwd, data.name, salt];
-
-          const sql: string =
-            "INSERT INTO Users (id, password, name, salt) VALUES(?, ?, ?, ?)";
-
           this.connection.query(
-            sql,
-            into_data,
+            "INSERT INTO Users (id, password, name, salt) VALUES(?, ?, ?, ?)",
+            [data.id, en_pwd, data.name, salt],
             (err: MysqlError | null, results: any) => {
               if (err) {
                 res.status(404).end();
@@ -188,7 +177,7 @@ export default class User {
     });
   };
 
-  getMyInfo = (req: Request, res: Response, next: NextFunction) => {
+  my = (req: Request, res: Response, next: NextFunction) => {
     const { id } = res.locals;
     if (!check_id(id)) {
       res.status(404).end();
@@ -196,44 +185,38 @@ export default class User {
     }
 
     this.connection.query(
-      `SELECT id,name,intro,favorite,deleted_day from Users WHERE id='${id}'`,
-      (error: MysqlError, rows: any) => {
+      "SELECT id,name,intro,favorite,deleted_day from Users WHERE id = ?",
+      [id],
+      (error: MysqlError | null, rows: any) => {
         if (error) {
           logs_(error.toString());
           res.status(404).end();
         }
 
-        const raw_data: string = JSON.stringify(rows);
-        const data: UserJSON = JSON.parse(
-          raw_data.substring(1, raw_data.length - 1)
-        );
-        if (data.deleted_day != null) {
+        if (rows.deleted_day != null) {
           res.status(404).end();
           return;
         }
 
-        res.status(200).send(data);
+        res.status(200).send(rows);
       }
     );
   };
 
-  getCollection = (req: Request, res: Response, next: NextFunction) => {
+  getCollections = (req: Request, res: Response, next: NextFunction) => {
     const { id } = res.locals;
     this.connection.query(
-      `SELECT rec.seq ,rec.recipeName, rec.rarity, rec.summary,rec.path ,c.Date FROM Recipe AS rec JOIN Collection AS c ON c.rec_num = rec.seq AND c.id = '${id}'`,
-      (error: MysqlError, rows: any) => {
+      "SELECT rec.seq, rec.recipeName, rec.rarity, rec.summary, rec.path, c.Date FROM Recipe AS rec JOIN Collection AS c ON c.rec_num = rec.seq AND c.id = ?",
+      [id],
+      (error: MysqlError | null, rows: any) => {
         if (error) {
           logs_(error.toString());
           res.status(404).end();
           return;
         }
-
-        const raw_data: string = JSON.stringify(rows);
-        const data: CollectionJSONArray = JSON.parse(
-          `{ "data" : [ ${raw_data.substring(1, raw_data.length - 1)}]}`
-        );
-
-        res.status(200).send(data);
+        
+        const response: CollectionJSONArray = rows;
+        res.status(200).send(response);
       }
     );
   };
@@ -242,17 +225,17 @@ export default class User {
     const Recipe_seq: number = +req.params.cId; // 추가할 레시피 seq
     const { id } = res.locals;
     this.connection.query(
-      `SELECT * FROM Collection WHERE id='${id}' AND rec_num=${Recipe_seq}`,
-      (error: MysqlError, rows: any) => {
+      "SELECT * FROM Collection WHERE id= ? AND rec_num= ?",
+      [id, Recipe_seq],
+      (error: MysqlError | null, rows: any) => {
         if (rows.length != 0 || error) {
           res.status(404).end();
           return;
         }
         this.connection.query(
-          `INSERT INTO Collection (id, rec_num, Date) VALUES ('${id}', ${Recipe_seq}, '${moment().format(
-            "YYYY-MM-DD HH:mm:ss"
-          )}')`,
-          (error: MysqlError, rows: any) => {
+          "INSERT INTO Collection (id, rec_num, Date) VALUES (?, ?, ?)",
+          [id, Recipe_seq, moment().format("YYYY-MM-DD HH:mm:ss")],
+          (error: MysqlError | null, rows: any) => {
             if (error) {
               res.status(404).end();
               return;
@@ -264,7 +247,7 @@ export default class User {
     );
   };
 
-  addNewRoom = (req: Request, res: Response, next: NextFunction) => {
+  addRoom = (req: Request, res: Response, next: NextFunction) => {
     const input: RoomJSON = {
       title: req.body.title,
       id: res.locals.id,
@@ -273,8 +256,9 @@ export default class User {
     };
     try {
       this.connection.query(
-        `INSERT INTO RoomInfo (title, id, date, Data) VALUES ('${input.title}', '${input.id}', '${input.date}', '${input.Data}')`,
-        (err: MysqlError, rows: any) => {
+        "INSERT INTO RoomInfo (title, id, date, Data) VALUES (?, ?, ?, ?)",
+        [input.title, input.id, input.date, input.Data],
+        (err: MysqlError | null, rows: any) => {
           if (err) {
             res.status(404).end();
             logs_(err.toString());
@@ -293,8 +277,9 @@ export default class User {
     try {
       const { id } = res.locals;
       this.connection.query(
-        `SELECT seq, title, date, Data FROM RoomInfo WHERE id='${id}'`,
-        (err: MysqlError, rows: any) => {
+        "SELECT seq, title, date, Data FROM RoomInfo WHERE id = ?",
+        [id],
+        (err: MysqlError | null, rows: any) => {
           if (err) {
             res.status(404).end();
             return;
@@ -304,8 +289,7 @@ export default class User {
             res.status(204).end();
             return;
           }
-
-          const data: any = JSON.parse(JSON.stringify(rows));
+          const data: any = JSON.parse(JSON.stringify(rows)); // deep copy
 
           for (let i: number = 0; i < data.length; i++) {
             data[i].Data = JSON.parse(data[i].Data);
@@ -323,9 +307,8 @@ export default class User {
   updateRoom = (req: Request, res: Response, next: NextFunction) => {
     try {
       this.connection.query(
-        `UPDATE RoomInfo SET Data='${JSON.stringify(
-          req.body.Data
-        )}' WHERE seq='${req.params.seq}' AND id='${res.locals.id}'`
+        "UPDATE RoomInfo SET Data = ? WHERE seq= ? AND id= ?",
+        [JSON.stringify(req.body.Data), req.params.seq, res.locals.id]
       );
       res.status(200).end();
       return;
