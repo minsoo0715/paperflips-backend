@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { MysqlError } from "mysql"; // mysql 모듈
+import { MysqlError, OkPacket } from "mysql"; // mysql 모듈
 import { secretObj } from "../config/jwt"; // jwt 비밀키
 import {
   CollectionJSONArray,
@@ -11,11 +11,11 @@ import {
   registerJSON,
 } from "../types/interface";
 import { isAdmin } from "../util/admin"; // admin 판단을 위함
-import { logs_ } from "../util/botLogger";
 import { check_id, check_name, check_pwd } from "../util/validation"; // 정규식 체크
 
 import moment from "moment";
 import "moment-timezone";
+import Exception from "../Exception";
 import { connection } from "../util/mysql";
 
 moment.tz.setDefault("Asia/Seoul");
@@ -29,16 +29,13 @@ export default class User {
 
   getUsers = (req: Request, res: Response, next: NextFunction) => {
     this.connection.query(
-      "SELECT id, name, password, intro, favorite, deleted_day from Users",
+      "SELECT id, name, password, intro, favorite, deleted_day FROM Users",
       (error: MysqlError, rows: any) => {
-        // sql 쿼리
         if (error) {
-          // 에러 발생
-          logs_(error.toString());
-          res.status(404).end();
+          next(error);
           return;
         }
-        res.status(200).send(rows); // 데이터 전송
+        res.status(200).send(rows);
       }
     );
   };
@@ -47,17 +44,14 @@ export default class User {
     const userId = req.params.uId;
 
     this.connection.query(
-      "SELECT id, name, password, intro, favorite, deleted_day from Users where id = ?",
+      "SELECT id, name, password, intro, favorite, deleted_day FROM Users WHERE id = ?",
       [userId],
       (error: MysqlError | null, rows: any) => {
-        // sql 쿼리
         if (error) {
-          // 에러 발생
-          logs_(error.toString());
-          res.status(404).end();
+          next(error);
           return;
         }
-        res.status(200).send(rows[0]); // 데이터 전송
+        res.status(200).send(rows[0]);
       }
     );
   };
@@ -69,21 +63,20 @@ export default class User {
     };
 
     if (!check_id(data.id) || !check_pwd(data.pwd)) {
-      res.status(404).end();
+      next(new Exception("요청 바디 형식을 다시 확인해주세요.", 400));
       return;
     }
     try {
       this.connection.query(
-        "SELECT password, salt, name, intro, favorite, deleted_day from Users WHERE id = ?",
+        "SELECT password, salt, name, intro, favorite, deleted_day FROM Users WHERE id = ?",
         [data.id],
         (error: MysqlError | null, rows: any[]) => {
           if (error) {
-            logs_(error.toString());
-            res.status(404).end();
+            next(error);
             return;
           }
           if (!rows.length) {
-            res.status(404).end();
+            next(new Exception("로그인에 실패하였습니다.", 401));
             return;
           }
           crypto.pbkdf2(
@@ -94,43 +87,43 @@ export default class User {
             "sha512",
             (err: Error | null, key: Buffer) => {
               if (err) {
-                res.status(404).end();
+                next(err);
                 return;
               }
 
-              if (key.toString("base64") == rows[0].password) {
-                const token: string = jwt.sign(
-                  {
-                    id: req.body.id,
-                    admin: isAdmin(req.body.id),
-                  },
-                  secretObj.secret,
-                  {
-                    expiresIn: "30m",
-                  }
-                );
-
-                const data: UserJSON = {
-                  id: req.body.id,
-                  name: rows[0].name,
-                  intro: rows[0].intro,
-                  favorite: rows[0].favorite,
-                  deleted_day: rows[0].deleted_day,
-                };
-
-                res.cookie("user", token);
-
-                res.status(200).send(data);
-              } else {
-                res.status(404).end();
+              if (key.toString("base64") !== rows[0].password) {
+                next(new Exception("로그인에 실패하였습니다.", 401));
+                return;
               }
+
+              const token: string = jwt.sign(
+                {
+                  id: req.body.id,
+                  admin: isAdmin(req.body.id),
+                },
+                secretObj.secret,
+                {
+                  expiresIn: "30m",
+                }
+              );
+
+              const data: UserJSON = {
+                id: req.body.id,
+                name: rows[0].name,
+                intro: rows[0].intro,
+                favorite: rows[0].favorite,
+                deleted_day: rows[0].deleted_day,
+              };
+
+              res.cookie("user", token);
+
+              res.status(200).send(data);
             }
           );
         }
       );
     } catch (e) {
-      logs_(e as string);
-      res.status(404).end();
+      next(e);
     }
   };
 
@@ -143,7 +136,7 @@ export default class User {
 
     /// ////////정규식 체크(SQL Injection 방지)
     if (!check_id(data.id) || !check_pwd(data.pwd) || !check_name(data.name)) {
-      res.status(404).end();
+      next(new Exception("요청 바디 형식을 다시 확인해주세요.", 400));
       return;
     }
 
@@ -157,6 +150,11 @@ export default class User {
         64,
         "sha512",
         (err: Error | null, key: Buffer) => {
+          if (err) {
+            next(err);
+            return;
+          }
+
           const en_pwd: string = key.toString("base64"); // 암호화한 pwd
           const salt: string = buf.toString("base64"); // 랜덤 문자열 salt
 
@@ -165,11 +163,10 @@ export default class User {
             [data.id, en_pwd, data.name, salt],
             (err: MysqlError | null, results: any) => {
               if (err) {
-                res.status(404).end();
-                logs_(err.toString());
-              } else {
-                res.status(200).end();
+                next(err);
+                return;
               }
+              res.status(200).end();
             }
           );
         }
@@ -179,22 +176,23 @@ export default class User {
 
   my = (req: Request, res: Response, next: NextFunction) => {
     const { id } = res.locals;
-    if (!check_id(id)) {
-      res.status(404).end();
-      return;
-    }
 
     this.connection.query(
-      "SELECT id,name,intro,favorite,deleted_day from Users WHERE id = ?",
+      "SELECT id, name, intro, favorite, deleted_day FROM Users WHERE id = ?",
       [id],
       (error: MysqlError | null, rows: any) => {
         if (error) {
-          logs_(error.toString());
-          res.status(404).end();
+          next(error);
+          return;
         }
 
-        if (rows.deleted_day != null) {
-          res.status(404).end();
+        if (!rows.length || rows.deleted_day != null) {
+          next(
+            new Exception(
+              "인증 정보가 유효하지 않습니다. 다시 로그인하세요.",
+              404
+            )
+          );
           return;
         }
 
@@ -205,16 +203,16 @@ export default class User {
 
   getCollections = (req: Request, res: Response, next: NextFunction) => {
     const { id } = res.locals;
+
     this.connection.query(
       "SELECT rec.seq, rec.recipeName, rec.rarity, rec.summary, rec.path, c.Date FROM Recipe AS rec JOIN Collection AS c ON c.rec_num = rec.seq AND c.id = ?",
       [id],
       (error: MysqlError | null, rows: any) => {
         if (error) {
-          logs_(error.toString());
-          res.status(404).end();
+          next(error);
           return;
         }
-        
+
         const response: CollectionJSONArray = rows;
         res.status(200).send(response);
       }
@@ -228,8 +226,13 @@ export default class User {
       "SELECT * FROM Collection WHERE id= ? AND rec_num= ?",
       [id, Recipe_seq],
       (error: MysqlError | null, rows: any) => {
-        if (rows.length != 0 || error) {
-          res.status(404).end();
+        if (error) {
+          next(error);
+          return;
+        }
+
+        if (rows.length != 0) {
+          next(new Exception("이미 레시피가 등록되어 있습니다.", 409));
           return;
         }
         this.connection.query(
@@ -237,7 +240,7 @@ export default class User {
           [id, Recipe_seq, moment().format("YYYY-MM-DD HH:mm:ss")],
           (error: MysqlError | null, rows: any) => {
             if (error) {
-              res.status(404).end();
+              next(error);
               return;
             }
             res.status(200).end();
@@ -260,8 +263,7 @@ export default class User {
         [input.title, input.id, input.date, input.Data],
         (err: MysqlError | null, rows: any) => {
           if (err) {
-            res.status(404).end();
-            logs_(err.toString());
+            next(err);
             return;
           }
 
@@ -269,7 +271,7 @@ export default class User {
         }
       );
     } catch (e) {
-      res.status(404).end();
+      next(e);
     }
   };
 
@@ -281,12 +283,12 @@ export default class User {
         [id],
         (err: MysqlError | null, rows: any) => {
           if (err) {
-            res.status(404).end();
+            next(err);
             return;
           }
 
           if (rows.length == 0) {
-            res.status(204).end();
+            next(new Exception("생성한 방이 없습니다.", 204));
             return;
           }
           const data: any = JSON.parse(JSON.stringify(rows)); // deep copy
@@ -299,8 +301,7 @@ export default class User {
         }
       );
     } catch (e) {
-      logs_(e as string);
-      res.status(404).end();
+      next(e);
     }
   };
 
@@ -308,13 +309,17 @@ export default class User {
     try {
       this.connection.query(
         "UPDATE RoomInfo SET Data = ? WHERE seq= ? AND id= ?",
-        [JSON.stringify(req.body.Data), req.params.seq, res.locals.id]
+        [JSON.stringify(req.body.Data), req.params.seq, res.locals.id],
+        (error: MysqlError | null, rows: OkPacket) => {
+          if (rows.affectedRows === 0) {
+            next(new Exception("해당 방이 존재하지 않습니다.", 404));
+            return;
+          }
+          res.status(200).end();
+        }
       );
-      res.status(200).end();
-      return;
     } catch (e) {
-      logs_(e as string);
-      res.status(404).end();
+      next(e);
     }
   };
 }

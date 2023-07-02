@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { secretObj } from "../config/jwt"; //jwt 비밀키
 import { Role } from "../types/enum";
 import { jwtPayLoad } from "../types/interface";
+import Exception from "../Exception";
 
 function getPayloadWithVerify(request: Request) {
   const token: string = request.cookies.user;
@@ -16,11 +17,11 @@ export function auth(role: Role) {
       res.locals.id = payload.id;
 
       if (role == Role.Admin && !payload.admin) {
-        res.status(403).end();
+        next(new Exception("권한이 없습니다.", 403));
         return;
       }
     } catch (err) {
-      res.status(401).end();
+      next(new Exception("로그인이 필요합니다.", 401));
       return;
     }
 

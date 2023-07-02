@@ -13,6 +13,7 @@ const favicon = require("serve-favicon");
 import { chk_req } from "./MiddleWare/ipSecureFilter";
 
 import Router from "./router/main";
+import errorHandler from "./MiddleWare/errorHandler";
 
 const app = express();
 app.use(compression());
@@ -24,6 +25,7 @@ app.use(favicon(path.join(__dirname, "favicon", "favicon.ico")));
 
 app.use(chk_req);
 app.use(Router);
+app.use(errorHandler)
 
 console.log(process.env.NODE_ENV);
 

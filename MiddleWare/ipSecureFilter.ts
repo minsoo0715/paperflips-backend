@@ -21,7 +21,7 @@ export const chk_req = (req: Request, res: Response, next: NextFunction) => {
         try {
           const data: any = JSON.parse(body);
           if (data.countryCode !== "KR") {
-            // 중국 ip 차단
+            // 한국 이외의 IP 차단
             res.status(404).end();
             return;
           }
@@ -31,11 +31,11 @@ export const chk_req = (req: Request, res: Response, next: NextFunction) => {
               req.headers["x-forwarded-for"] || req.connection.remoteAddress
             }`
           );
-          next();
         } catch (e) {
-          logs_(e as string);
-          res.status(404).end();
+          next(e);
         }
+        
+        next();
       }
     );
   }
