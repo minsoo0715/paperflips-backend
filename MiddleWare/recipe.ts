@@ -37,6 +37,7 @@ export default class Recipe {
           }
           if (!rows.length) {
             next(new Exception("해당 레시피가 존재하지 않습니다.", 404));
+            return;
           }
 
           const recipe: RecipeJSON = rows[0];
