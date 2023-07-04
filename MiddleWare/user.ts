@@ -63,68 +63,66 @@ export default class User {
     };
 
     if (!check_id(data.id) || !check_pwd(data.pwd)) {
-      next(new Exception("요청 바디 형식을 다시 확인해주세요.", 400));
-      return;
+      throw new Exception("요청 바디 형식을 다시 확인해주세요.", 400);
     }
-    try {
-      this.connection.query(
-        "SELECT password, salt, name, intro, favorite, deleted_day FROM Users WHERE id = ?",
-        [data.id],
-        (error: MysqlError | null, rows: any[]) => {
-          if (error) {
-            next(error);
-            return;
-          }
-          if (!rows.length) {
-            next(new Exception("로그인에 실패하였습니다.", 401));
-            return;
-          }
-          crypto.pbkdf2(
-            data.pwd,
-            rows[0].salt,
-            126117,
-            64,
-            "sha512",
-            (err: Error | null, key: Buffer) => {
-              if (err) {
-                next(err);
-                return;
-              }
 
-              if (key.toString("base64") !== rows[0].password) {
-                next(new Exception("로그인에 실패하였습니다.", 401));
-                return;
-              }
-
-              const token: string = jwt.sign(
-                {
-                  id: req.body.id,
-                  admin: isAdmin(req.body.id),
-                },
-                secretObj.secret,
-                {
-                  expiresIn: "30m",
-                }
-              );
-
-              const data: UserJSON = {
-                id: req.body.id,
-                name: rows[0].name,
-                intro: rows[0].intro,
-                favorite: rows[0].favorite,
-                deleted_day: rows[0].deleted_day,
-              };
-
-              res.cookie("user", token);
-
-              res.status(200).send(data);
-            }
-          );
+    this.connection.query(
+      "SELECT password, salt, name, intro, favorite, deleted_day FROM Users WHERE id = ?",
+      [data.id],
+      (error: MysqlError | null, rows: any[]) => {
+        if (error) {
+          next(error);
+          return;
         }
-      );
-    } catch (e) {
-      next(e);
-    }
+
+        if (!rows.length) {
+          next(new Exception("로그인에 실패하였습니다.", 401));
+          return;
+        }
+
+        crypto.pbkdf2(
+          data.pwd,
+          rows[0].salt,
+          126117,
+          64,
+          "sha512",
+          (err: Error | null, key: Buffer) => {
+            if (err) {
+              next(err);
+              return;
+            }
+
+            if (key.toString("base64") !== rows[0].password) {
+              next(new Exception("로그인에 실패하였습니다.", 401));
+              return;
+            }
+
+            const token: string = jwt.sign(
+              {
+                id: req.body.id,
+                admin: isAdmin(req.body.id),
+              },
+              secretObj.secret,
+              {
+                expiresIn: "30m",
+              }
+            );
+
+            const data: UserJSON = {
+              id: req.body.id,
+              name: rows[0].name,
+              intro: rows[0].intro,
+              favorite: rows[0].favorite,
+              deleted_day: rows[0].deleted_day,
+            };
+
+            res.cookie("user", token);
+
+            res.status(200).send(data);
+          }
+        );
+      }
+    );
   };
 
   register = (req: Request, res: Response, next: NextFunction) => {
@@ -134,15 +132,16 @@ export default class User {
       name: req.body.name,
     };
 
-    /// ////////정규식 체크(SQL Injection 방지)
     if (!check_id(data.id) || !check_pwd(data.pwd) || !check_name(data.name)) {
-      next(new Exception("요청 바디 형식을 다시 확인해주세요.", 400));
-      return;
+      throw new Exception("요청 바디 형식을 다시 확인해주세요.", 400);
     }
 
-    // 32바이트의 랜덤 문자열 생성(salt)
     crypto.randomBytes(32, (err: Error | null, buf: Buffer) => {
-      // salt를 이용한 pwd 암호화
+      if (err) {
+        next(err);
+        return;
+      }
+
       crypto.pbkdf2(
         data.pwd,
         buf.toString("base64"),
@@ -155,12 +154,12 @@ export default class User {
             return;
           }
 
-          const en_pwd: string = key.toString("base64"); // 암호화한 pwd
+          const encryptedPwd: string = key.toString("base64"); // 암호화한 pwd
           const salt: string = buf.toString("base64"); // 랜덤 문자열 salt
 
           this.connection.query(
             "INSERT INTO Users (id, password, name, salt) VALUES(?, ?, ?, ?)",
-            [data.id, en_pwd, data.name, salt],
+            [data.id, encryptedPwd, data.name, salt],
             (err: MysqlError | null, results: any) => {
               if (err) {
                 next(err);
@@ -257,69 +256,58 @@ export default class User {
       date: moment().format("YYYY-MM-DD HH:mm:ss"),
       Data: JSON.stringify(req.body.data),
     };
-    try {
-      this.connection.query(
-        "INSERT INTO RoomInfo (title, id, date, Data) VALUES (?, ?, ?, ?)",
-        [input.title, input.id, input.date, input.Data],
-        (err: MysqlError | null, rows: any) => {
-          if (err) {
-            next(err);
-            return;
-          }
 
-          res.status(200).end();
+    this.connection.query(
+      "INSERT INTO RoomInfo (title, id, date, Data) VALUES (?, ?, ?, ?)",
+      [input.title, input.id, input.date, input.Data],
+      (err: MysqlError | null, rows: any) => {
+        if (err) {
+          next(err);
+          return;
         }
-      );
-    } catch (e) {
-      next(e);
-    }
+
+        res.status(200).end();
+      }
+    );
   };
 
   getMyRoom = (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = res.locals;
-      this.connection.query(
-        "SELECT seq, title, date, Data FROM RoomInfo WHERE id = ?",
-        [id],
-        (err: MysqlError | null, rows: any) => {
-          if (err) {
-            next(err);
-            return;
-          }
-
-          if (rows.length == 0) {
-            next(new Exception("생성한 방이 없습니다.", 204));
-            return;
-          }
-          const data: any = JSON.parse(JSON.stringify(rows)); // deep copy
-
-          for (let i: number = 0; i < data.length; i++) {
-            data[i].Data = JSON.parse(data[i].Data);
-          }
-
-          res.status(200).send(data);
+    const { id } = res.locals;
+    this.connection.query(
+      "SELECT seq, title, date, Data FROM RoomInfo WHERE id = ?",
+      [id],
+      (err: MysqlError | null, rows: any) => {
+        if (err) {
+          next(err);
+          return;
         }
-      );
-    } catch (e) {
-      next(e);
-    }
+
+        if (rows.length == 0) {
+          next(new Exception("생성한 방이 없습니다.", 204));
+          return;
+        }
+        const data: any = JSON.parse(JSON.stringify(rows)); // deep copy
+
+        for (let i: number = 0; i < data.length; i++) {
+          data[i].Data = JSON.parse(data[i].Data);
+        }
+
+        res.status(200).send(data);
+      }
+    );
   };
 
   updateRoom = (req: Request, res: Response, next: NextFunction) => {
-    try {
-      this.connection.query(
-        "UPDATE RoomInfo SET Data = ? WHERE seq= ? AND id= ?",
-        [JSON.stringify(req.body.Data), req.params.seq, res.locals.id],
-        (error: MysqlError | null, rows: OkPacket) => {
-          if (rows.affectedRows === 0) {
-            next(new Exception("해당 방이 존재하지 않습니다.", 404));
-            return;
-          }
-          res.status(200).end();
+    this.connection.query(
+      "UPDATE RoomInfo SET Data = ? WHERE seq= ? AND id= ?",
+      [JSON.stringify(req.body.Data), req.params.seq, res.locals.id],
+      (error: MysqlError | null, rows: OkPacket) => {
+        if (rows.affectedRows === 0) {
+          next(new Exception("해당 방이 존재하지 않습니다.", 404));
+          return;
         }
-      );
-    } catch (e) {
-      next(e);
-    }
+        res.status(200).end();
+      }
+    );
   };
 }
