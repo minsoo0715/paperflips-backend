@@ -1,24 +1,30 @@
-/* 정규식 체크를 하기 위한 함수들 */
+const exp_num = /^[0-9]+$/;
+const exp_id = /^[A-Za-z]{1}[A-Za-z0-9]{5,11}$/;
+const exp_str = /^[A-Z0-9a-z가-힣\s]+$/;
+const exp_pwd =
+  /^.*(?=^.{8,15}$)(?=.*\d)(?=.*[a-zA-Z])(?=.*[!@#$%^&+=]).*$/; //8~15자리
+const exp_url = /(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/
 
-const exp:RegExp = /^[0-9]+$/;
-const exp_id:RegExp = /^[A-Za-z]{1}[A-Za-z0-9]{5,11}$/;         
-const exp_name:RegExp = /^[A-Z0-9a-z가-힣\s]+$/
-const exp_pwd:RegExp = /^.*(?=^.{8,15}$)(?=.*\d)(?=.*[a-zA-Z])(?=.*[!@#$%^&+=]).*$/;  //8~15자리 
-
-
-export function check_id(object:string):boolean {
-    return exp_id.test(object);
+function validate(strArray: Array<string>, exp: RegExp) {
+  return strArray.reduce((p, c) => p && exp.test(c), true);
 }
 
-export function check_pwd(object:string):boolean {
-    return exp_pwd.test(object);
+export function validate_id(...str: Array<string>): boolean {
+  return validate(str, exp_id);
 }
 
-export function check_name(object:string):boolean {
-    return exp_name.test(object);
+export function validate_pwd(...str: Array<string>): boolean {
+  return validate(str, exp_pwd);
 }
 
-export function check_number(object:string):boolean {
-    return exp.test(object);
+export function validate_str(...str: Array<string>): boolean {
+  return validate(str, exp_str);
 }
 
+export function validate_number(...str: Array<string>): boolean {
+  return validate(str, exp_num);
+}
+
+export function validate_url(...str: Array<string>): boolean {
+    return validate(str, exp_url);
+}
