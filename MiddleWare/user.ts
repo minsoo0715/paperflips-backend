@@ -11,7 +11,12 @@ import {
   registerJSON,
 } from "../types/interface";
 import { isAdmin } from "../util/admin"; // admin 판단을 위함
-import { check_id, check_name, check_pwd } from "../util/validation"; // 정규식 체크
+import {
+  validate_id,
+  validate_number,
+  validate_pwd,
+  validate_str,
+} from "../util/validation"; // 정규식 체크
 
 import moment from "moment";
 import "moment-timezone";
@@ -43,6 +48,10 @@ export default class User {
   getUser = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.params.uId;
 
+    if (!validate_id(userId)) {
+      throw new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400);
+    }
+
     this.connection.query(
       "SELECT id, name, password, intro, favorite, deleted_day FROM Users WHERE id = ?",
       [userId],
@@ -62,7 +71,7 @@ export default class User {
       pwd: req.body.password,
     };
 
-    if (!check_id(data.id) || !check_pwd(data.pwd)) {
+    if (!validate_id(data.id) || !validate_pwd(data.pwd)) {
       throw new Exception("요청 바디 형식을 다시 확인해주세요.", 400);
     }
 
@@ -132,7 +141,11 @@ export default class User {
       name: req.body.name,
     };
 
-    if (!check_id(data.id) || !check_pwd(data.pwd) || !check_name(data.name)) {
+    if (
+      !validate_id(data.id) ||
+      !validate_pwd(data.pwd) ||
+      !validate_str(data.name)
+    ) {
       throw new Exception("요청 바디 형식을 다시 확인해주세요.", 400);
     }
 
@@ -219,6 +232,10 @@ export default class User {
   };
 
   addCollection = (req: Request, res: Response, next: NextFunction) => {
+    if (!validate_number(req.params.cId)) {
+      throw new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400);
+    }
+
     const Recipe_seq: number = +req.params.cId; // 추가할 레시피 seq
     const { id } = res.locals;
     this.connection.query(

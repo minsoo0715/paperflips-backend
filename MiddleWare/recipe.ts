@@ -10,7 +10,7 @@ import {
 } from "../types/interface";
 import { S3_server } from "../util/S3";
 import { connection } from "../util/mysql";
-import { check_name, check_number } from "../util/validation";
+import { validate_str, validate_url } from "../util/validation";
 
 export default class Recipe {
   connection: Connection;
@@ -22,10 +22,10 @@ export default class Recipe {
   getRecipe = (req: Request, res: Response, next: NextFunction) => {
     const seq: string = req.params.seq;
 
-    if (!check_number(seq)) {
-      next(new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400));
-      return;
+    if (!validate_str(seq)) {
+      throw new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400);
     }
+
     this.connection.query(
       "SELECT recipeName, rarity, summary FROM Recipe WHERE seq = ?",
       [seq],
@@ -53,13 +53,9 @@ export default class Recipe {
       rarity: req.body.rarity,
       summary: req.body.summary,
     };
-    if (
-      !check_name(data.recipeName) ||
-      !check_name(data.rarity) ||
-      !check_name(data.summary)
-    ) {
-      next(new Exception("요청 바디 형식을 다시 확인해주세요.", 400));
-      return;
+
+    if (!validate_str(data.recipeName, data.rarity, data.summary)) {
+      throw new Exception("요청 바디 형식을 다시 확인해주세요.", 400);
     }
 
     this.connection.query(
@@ -98,16 +94,15 @@ export default class Recipe {
   };
 
   searchRecipes = (req: Request, res: Response, next: NextFunction) => {
-    const recipe: any = req.query.q;
+    const query: any = req.query.q;
 
-    if (!check_name(recipe)) {
-      next(new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400));
-      return;
+    if (validate_str(query)) {
+      throw new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400);
     }
 
     this.connection.query(
       "SELECT seq, recipeName, rarity, summary from Recipe WHERE recipeName LIKE %?%",
-      [recipe],
+      [query],
       (error: MysqlError | null, rows: any) => {
         if (error) {
           next(error);
@@ -147,6 +142,13 @@ export default class Recipe {
       ImgPath: req.body.ImgPath,
     };
 
+    if (
+      !validate_str(data.recipeName, data.detail) ||
+      !validate_url(data.VidPath, data.ImgPath)
+    ) {
+      throw new Exception("요청 바디 형식을 다시 확인해주세요.", 400);
+    }
+
     this.connection.query(
       "INSERT INTO Recipe_Detail (recipeName, detail, VidPath, ImgPath) VALUES (?, ?, ?, ?)",
       [data.recipeName, data.detail, data.VidPath, data.ImgPath],
@@ -162,9 +164,15 @@ export default class Recipe {
   };
 
   getDetail = (req: Request, res: Response, next: NextFunction) => {
+    const recipeName: string = req.params.recipeName;
+
+    if (!validate_str(recipeName)) {
+      throw new Exception("요청 파라미터 형식을 다시 확인해주세요.", 400);
+    }
+
     this.connection.query(
       "SELECT * FROM Recipe_Detail WHERE recipeName = ?",
-      [req.params.recipeName],
+      [recipeName],
       (error: MysqlError | null, rows: any) => {
         if (error) {
           next(error);
